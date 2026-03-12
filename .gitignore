@@ -1,0 +1,10 @@
+# Binary
+lmfdb
+lmfdb-*
+*.exe
+
+# Go
+vendor/
+
+# OS
+.DS_Store

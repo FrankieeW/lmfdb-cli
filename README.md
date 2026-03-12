@@ -6,15 +6,16 @@ A command-line tool for querying the **LMFDB** (L-Functions and Modular Forms Da
 
 ## Features
 
-- ✅ Pure Go implementation (no dependencies)
-- ✅ Bypasses reCAPTCHA using chromedp (with `--browser` flag)
-- ✅ Support all LMFDB API collections
-- ✅ Table/JSON/CSV output formats
-- ✅ Filter and sort support
+- Pure Go implementation
+- Bypasses reCAPTCHA using chromedp (with `--browser` flag)
+- Support all LMFDB API collections
+- Table/JSON/CSV output formats
+- Filter and sort support
+- Cross-platform (Linux, macOS, Windows)
 
 ## Installation
 
-### Homebrew (Recommended)
+### Homebrew (macOS/Linux)
 ```bash
 brew tap frankieew/tap
 brew install lmfdb-cli
@@ -31,6 +32,9 @@ go build -o lmfdb ./cmd/lmfdb
 ./lmfdb install-browser  # Optional: for reCAPTCHA bypass
 ```
 
+### From Release
+Download pre-built binaries from [GitHub Releases](https://github.com/FrankieeW/lmfdb-cli/releases).
+
 ## Quick Start
 
 ```bash
@@ -44,87 +48,58 @@ lmfdb ec -n 10
 lmfdb nf -d 2 -n 10 --browser
 
 # List available collections
-lmfdb list-collections
+lmfdb list
 ```
 
 ## Commands
 
 ### nf - Number Fields
 
-Query number fields from LMFDB.
-
 ```bash
-# Query quadratic fields
-lmfdb nf -d 2
-
-# Query cubic fields
-lmfdb nf -d 3
-
-# Filter by discriminant
-lmfdb nf -d 2 --discriminant -5
-
-# Limit results
-lmfdb nf -d 2 -n 20
-
-# Output to JSON file
-lmfdb nf -d 2 -n 10 -o results.json
+lmfdb nf -d 2              # quadratic fields
+lmfdb nf -d 3              # cubic fields
+lmfdb nf -d 2 --disc -5    # filter by discriminant
+lmfdb nf -d 2 -n 20        # limit results
+lmfdb nf --id 2.0.3.1      # specific field by label
+lmfdb nf -d 2 --fmt json   # JSON output
+lmfdb nf --browser -n 50   # use browser to bypass reCAPTCHA
 ```
 
 Options:
-- `-d, --degree`: Number field degree (default: 2)
-- `--disc`: Filter by discriminant
-- `-h, --class-number`: Filter by class number
-- `-n, --limit`: Number of results (default: 10)
-- `-f, --fields`: Comma-separated fields to return
-- `-o, --output`: Output file path (JSON)
-- `--headless/--no-headless`: Browser mode
+- `-d` — Number field degree (default: 2)
+- `--disc` — Filter by discriminant
+- `--class` — Filter by class number
+- `--sig` — Filter by signature (e.g., `0,1`)
+- `-n` — Number of results (default: 10)
+- `--offset` — Result offset for pagination
+- `--sort` — Sort by field (prefix `-` for descending)
+- `-f` — Fields to return (comma-separated)
+- `-o` — Output file
+- `--fmt` — Output format: `table`, `json`, `csv`
+- `--id` — Get specific field by label
+- `-q` — Quiet mode
+- `--browser` — Use browser (bypasses reCAPTCHA)
 
 ### ec - Elliptic Curves
 
-Query elliptic curves from LMFDB.
-
 ```bash
-# Query all elliptic curves
-lmfdb ec -n 10
-
-# Filter by rank
-lmfdb ec -r 2
-
-# Filter by torsion
-lmfdb ec -t 5
-
-# Filter by conductor
-lmfdb ec --conductor 11
-
-# Custom fields
-lmfdb ec -n 10 -f label,conductor,rank,torsion
+lmfdb ec -n 10              # list curves
+lmfdb ec -r 2               # filter by rank
+lmfdb ec -t 5               # filter by torsion
+lmfdb ec --conductor 11     # filter by conductor
 ```
 
 Options:
-- `-r, --rank`: Filter by Mordell-Weil rank
-- `-t, --torsion`: Filter by torsion order
-- `--conductor`: Filter by conductor
-- `-n, --limit`: Number of results (default: 10)
-- `-f, --fields`: Comma-separated fields to return
-- `-o, --output`: Output file path (JSON)
+- `-r` — Filter by Mordell-Weil rank
+- `-t` — Filter by torsion order
+- `--conductor` — Filter by conductor
+- `-n`, `--offset`, `--sort`, `-f`, `-o`, `--fmt`, `-q`, `--browser` — same as `nf`
 
-### query - Generic Query
-
-Query any LMFDB API collection.
+### list (ls) - Available Collections
 
 ```bash
-# List collections
-lmfdb list-collections
-
-# Query specific collection
-lmfdb query nf_fields -n 5
-lmfdb query ec_curvedata -n 10
-
-# With custom parameters (JSON)
-lmfdb query nf_fields -k '{"degree": "i3"}' -n 10
+lmfdb list
 ```
-
-## Available Collections
 
 | Collection | Description |
 |------------|-------------|
@@ -137,32 +112,7 @@ lmfdb query nf_fields -k '{"degree": "i3"}' -n 10
 | `mf_newforms` | Modular forms |
 | `lf_fields` | Local fields |
 | `artin` | Artin representations |
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# Set timeout (milliseconds)
-export LMFDB_TIMEOUT=60000
-
-# Set headless mode
-export LMFDB_HEADLESS=true
-```
-
-## Development
-
-```bash
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Run tests
-pytest
-
-# Code formatting
-ruff check .
-ruff format .
-```
+| `belyi` | Belyi maps |
 
 ## License
 
@@ -171,5 +121,3 @@ MIT
 ## Credits
 
 - [LMFDB](https://www.lmfdb.org/) - The L-Functions and Modular Forms Database
-- [Playwright](https://playwright.dev/) - Browser automation
-- [Rich](https://rich.readthedocs.io/) - Terminal formatting
