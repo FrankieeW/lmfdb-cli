@@ -6,8 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  build-go:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -40,20 +43,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version-file: go.mod
 
       - name: Build
         env:
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
+        shell: bash
         run: |
-          $EXT = "${{ matrix.EXT }}"
-          $NAME = "lmfdb-${GOOS}-${GOARCH}${EXT}"
-          if ($EXT -eq '') {
-            go build -o "$NAME" ./cmd/lmfdb
-          } else {
-            go build -o "$NAME" ./cmd/lmfdb.exe
-          }
+          go build -o "lmfdb-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.EXT }}" ./cmd/lmfdb
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -61,11 +59,30 @@ jobs:
           name: lmfdb-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: lmfdb-*
 
-  release:
-    needs: build
+  build-python:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build package
+        run: |
+          pip install build
+          python -m build --wheel --sdist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+
+  release:
+    needs: [build-go, build-python]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Download all artifacts
@@ -74,10 +91,11 @@ jobs:
           path: artifacts
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/lmfdb-*
+          files: |
+            artifacts/**/lmfdb-*
+            artifacts/python-dist/*
+          generate_release_notes: true
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

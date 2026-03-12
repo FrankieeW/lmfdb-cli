@@ -6,25 +6,29 @@ A command-line tool for querying the **LMFDB** (L-Functions and Modular Forms Da
 
 ## Features
 
-- ✅ Bypasses reCAPTCHA using Playwright
+- ✅ Pure Go implementation (no dependencies)
+- ✅ Bypasses reCAPTCHA using chromedp (with `--browser` flag)
 - ✅ Support all LMFDB API collections
-- ✅ Beautiful table output with Rich
-- ✅ Customizable fields
-- ✅ JSON/YAML output format
+- ✅ Table/JSON/CSV output formats
 - ✅ Filter and sort support
 
 ## Installation
 
+### Homebrew (Recommended)
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/lmfdb-cli.git
+brew tap frankieew/tap
+brew install lmfdb-cli
+
+# Install browser for reCAPTCHA bypass
+lmfdb install-browser
+```
+
+### From Source
+```bash
+git clone https://github.com/FrankieeW/lmfdb-cli.git
 cd lmfdb-cli
-
-# Install dependencies
-pip install -e .
-
-# Install Playwright browsers
-playwright install chromium
+go build -o lmfdb ./cmd/lmfdb
+./lmfdb install-browser  # Optional: for reCAPTCHA bypass
 ```
 
 ## Quick Start
@@ -36,11 +40,11 @@ lmfdb nf -d 2 -n 10
 # Query elliptic curves
 lmfdb ec -n 10
 
+# Use browser to bypass reCAPTCHA
+lmfdb nf -d 2 -n 10 --browser
+
 # List available collections
 lmfdb list-collections
-
-# Generic query
-lmfdb query nf_fields -n 5
 ```
 
 ## Commands

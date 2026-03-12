@@ -104,7 +104,7 @@ func main() {
 	case "list", "ls":
 		listCollections()
 	case "version", "v":
-		fmt.Println("LMFDB CLI v1.3.0")
+		fmt.Println("LMFDB CLI v1.3.1")
 	case "install-browser":
 		installBrowser()
 	case "help", "--help", "-h":
@@ -147,7 +147,7 @@ type EllipticCurveOptions struct {
 }
 
 func printHelp() {
-	fmt.Println(`LMFDB CLI v1.3.0 - Query LMFDB from command line
+	fmt.Println(`LMFDB CLI v1.3.1 - Query LMFDB from command line
 
 Usage:
   lmfdb <command> [options]
