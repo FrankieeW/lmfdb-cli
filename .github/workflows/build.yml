@@ -47,10 +47,13 @@ jobs:
           GOOS: ${{ matrix.GOOS }}
           GOARCH: ${{ matrix.GOARCH }}
         run: |
-          EXT=${{ matrix.EXT }}
-          NAME="lmfdb-${GOOS}-${GOARCH}${EXT}"
-          go build -o "$NAME" ./cmd/lmfdb
-          echo "$NAME" >> build_artifacts.txt
+          $EXT = "${{ matrix.EXT }}"
+          $NAME = "lmfdb-${GOOS}-${GOARCH}${EXT}"
+          if ($EXT -eq '') {
+            go build -o "$NAME" ./cmd/lmfdb
+          } else {
+            go build -o "$NAME" ./cmd/lmfdb.exe
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
