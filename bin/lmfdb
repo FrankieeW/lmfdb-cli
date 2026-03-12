@@ -3,20 +3,18 @@
 LMFDB CLI - Command-line tool for querying LMFDB
 """
 import sys
+import os
 
-def main():
-    print("LMFDB CLI v0.1.0")
-    print("Usage: lmfdb [command]")
-    print("")
-    print("Commands:")
-    print("  nf                  Query Number Fields")
-    print("  ec                  Query Elliptic Curves")
-    print("  query               Generic query command")
-    print("  list-collections    List available API collections")
-    print("  version             Show version information")
-    print("")
-    print("Install Playwright browsers:")
-    print("  lmfdb install-browser")
+# Add the package to path
+cli_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(cli_dir, '..', 'share', 'lmfdb-cli'))
 
-if __name__ == "__main__":
-    main()
+# Import and run the main CLI
+try:
+    from lmfdb_cli.main import app
+    app()
+except ImportError:
+    print("Error: lmfdb-cli package not found.", file=sys.stderr)
+    print("Please ensure dependencies are installed:", file=sys.stderr)
+    print("  pip install lmfdb-cli", file=sys.stderr)
+    sys.exit(1)

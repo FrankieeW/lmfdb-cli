@@ -1,0 +1,56 @@
+#compdef lmfdb
+
+local -a commands
+commands=(
+  'nf:Query Number Fields'
+  'ec:Query Elliptic Curves'
+  'query:Generic query command'
+  'list-collections:List available API collections'
+  'version:Show version information'
+)
+
+local -a nf_opts
+nf_opts=(
+  '(-d --degree)'{-d,--degree}'[Number field degree]:degree:'
+  '(--discriminant)--disc[Filter by discriminant]:discriminant:'
+  '(-h --class-number)'{-h,--class-number}'[Filter by class number]:class_number:'
+  '(-n --limit)'{-n,--limit}'[Number of results]:limit:'
+  '(-f --fields)'{-f,--fields}'[Fields to return]:fields:'
+  '(-o --output)'{-o,--output}'[Output file]:output:_files'
+  '(--headless --no-headless)'[Run browser in headless mode]'
+)
+
+local -a ec_opts
+ec_opts=(
+  '(-r --rank)'{-r,--rank}'[Filter by rank]:rank:'
+  '(-t --torsion)'{-t,--torsion}'[Filter by torsion]:torsion:'
+  '(--conductor)'[Filter by conductor]:conductor:'
+  '(-n --limit)'{-n,--limit}'[Number of results]:limit:'
+  '(-f --fields)'{-f,--fields}'[Fields to return]:fields:'
+  '(-o --output)'{-o,--output}'[Output file]:output:_files'
+  '(--headless --no-headless)'[Run browser in headless mode]'
+)
+
+local -a query_opts
+query_opts=(
+  '(-n --limit)'{-n,--limit}'[Number of results]:limit:'
+  '(-f --fields)'{-f,--fields}'[Fields to return]:fields:'
+  '(-o --output)'{-o,--output}'[Output file]:output:_files'
+  '(-k --kwargs)'{-k,--kwargs}'[Additional query params as JSON]:kwargs:'
+  '(--headless --no-headless)'[Run browser in headless mode]'
+)
+
+case "$words[1]" in
+  nf)
+    _arguments -s $nf_opts
+    ;;
+  ec)
+    _arguments -s $ec_opts
+    ;;
+  query)
+    _arguments -s $query_opts
+    ;;
+  *)
+    _arguments -s "1:Commands:($commands)"
+    ;;
+esac
