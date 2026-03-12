@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/csv"
 	"encoding/json"
@@ -12,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/chromedp/chromedp"
 )
 
 var baseURL = "https://www.lmfdb.org"
@@ -26,7 +29,7 @@ var client = &http.Client{
 func main() {
 	nfCmd := flag.NewFlagSet("nf", flag.ExitOnError)
 	ecCmd := flag.NewFlagSet("ec", flag.ExitOnError)
-	
+
 	// nf options
 	nfDegree := nfCmd.Int("d", 2, "Number field degree")
 	nfDisc := nfCmd.String("disc", "", "Filter by discriminant")
@@ -40,7 +43,8 @@ func main() {
 	nfFormat := nfCmd.String("fmt", "table", "Output format: table, json, csv")
 	nfQuiet := nfCmd.Bool("q", false, "Quiet mode")
 	nfID := nfCmd.String("id", "", "Get specific field by label")
-	
+	nfBrowser := nfCmd.Bool("browser", false, "Use browser (bypasses reCAPTCHA)")
+
 	// ec options
 	ecRank := ecCmd.String("r", "", "Filter by rank")
 	ecTorsion := ecCmd.String("t", "", "Filter by torsion")
@@ -52,10 +56,11 @@ func main() {
 	ecOutput := ecCmd.String("o", "", "Output file")
 	ecFormat := ecCmd.String("fmt", "table", "Output format: table, json, csv")
 	ecQuiet := ecCmd.Bool("q", false, "Quiet mode")
+	ecBrowser := ecCmd.Bool("browser", false, "Use browser (bypasses reCAPTCHA)")
 
 	flag.Usage = printHelp
 	flag.Parse()
-	
+
 	if len(os.Args) < 2 {
 		printHelp()
 		os.Exit(1)
@@ -67,18 +72,19 @@ func main() {
 	case "nf":
 		nfCmd.Parse(os.Args[2:])
 		queryNumberFields(NumberFieldOptions{
-			Degree:   *nfDegree,
-			Disc:     *nfDisc,
-			ClassNum: *nfClassNum,
+			Degree:    *nfDegree,
+			Disc:      *nfDisc,
+			ClassNum:  *nfClassNum,
 			Signature: *nfSignature,
-			Limit:    *nfLimit,
-			Offset:   *nfOffset,
-			Sort:     *nfSort,
-			Fields:   *nfFields,
-			Output:   *nfOutput,
-			Format:   *nfFormat,
-			Quiet:    *nfQuiet,
-			ID:       *nfID,
+			Limit:     *nfLimit,
+			Offset:    *nfOffset,
+			Sort:      *nfSort,
+			Fields:    *nfFields,
+			Output:    *nfOutput,
+			Format:    *nfFormat,
+			Quiet:     *nfQuiet,
+			ID:        *nfID,
+			Browser:   *nfBrowser,
 		})
 	case "ec":
 		ecCmd.Parse(os.Args[2:])
@@ -93,11 +99,14 @@ func main() {
 			Output:    *ecOutput,
 			Format:    *ecFormat,
 			Quiet:     *ecQuiet,
+			Browser:   *ecBrowser,
 		})
 	case "list", "ls":
 		listCollections()
 	case "version", "v":
-		fmt.Println("LMFDB CLI v1.2.0")
+		fmt.Println("LMFDB CLI v1.3.0")
+	case "install-browser":
+		installBrowser()
 	case "help", "--help", "-h":
 		printHelp()
 	default:
@@ -120,6 +129,7 @@ type NumberFieldOptions struct {
 	Format    string
 	Quiet     bool
 	ID        string
+	Browser   bool
 }
 
 type EllipticCurveOptions struct {
@@ -133,19 +143,21 @@ type EllipticCurveOptions struct {
 	Output    string
 	Format    string
 	Quiet     bool
+	Browser   bool
 }
 
 func printHelp() {
-	fmt.Println(`LMFDB CLI v1.2.0 - Query LMFDB from command line
+	fmt.Println(`LMFDB CLI v1.3.0 - Query LMFDB from command line
 
 Usage:
   lmfdb <command> [options]
 
 Commands:
   nf                  Query Number Fields
-  ec                  Query Elliptic Curves  
+  ec                  Query Elliptic Curves
   list (ls)           List available API collections
   version (v)         Show version information
+  install-browser     Install Chrome browser for reCAPTCHA bypass
 
 Number Fields (nf):
   -d, --degree <n>    Number field degree (default: 2)
@@ -158,41 +170,39 @@ Number Fields (nf):
   -f, --fields <list> Fields to return (comma-separated)
   -o, --output <file> Output file
   --fmt <format>      Output format: table, json, csv (default: table)
-  --id <label>       Get specific field by label (e.g., 2.0.3.1)
+  --id <label>        Get specific field by label (e.g., 2.0.3.1)
   -q, --quiet         Quiet mode
-
-  Available fields: label, degree, disc, class_number, class_group, 
-                    signature, cm, coeffs, conductor, ramified_primes
+  --browser           Use browser (bypasses reCAPTCHA)
 
 Examples:
   lmfdb nf -d 2 -n 20
   lmfdb nf -d 3 --sort -class_number
   lmfdb nf -d 2 --disc -5
-  lmfdb nf -d 2 -f label,degree,disc,class_number -o fields.json --fmt json
-  lmfdb nf --id 2.0.3.1
-  lmfdb nf -d 2 -n 100 --fmt csv -o data.csv
+  lmfdb nf --browser -n 50`)
 
-Elliptic Curves (ec):
-  -r, --rank <n>       Filter by rank
-  -t, --torsion <n>   Filter by torsion
-  --conductor <n>     Filter by conductor
-  -n, --limit <n>     Number of results (default: 10)
-  --offset <n>        Result offset
-  --sort <field>      Sort by field
-  -f, --fields <list> Fields to return (comma-separated)
-  -o, --output <file> Output file
-  --fmt <format>      Output format: table, json, csv
+}
 
-  Available fields: label, conductor, rank, torsion, a1, a2, a3, a4, a6,
-                    j_invariant, cid, ciso, abvar_eqn
+func installBrowser() {
+	fmt.Println("Installing Chromium browser...")
 
-Examples:
-  lmfdb ec -r 0 -n 10
-  lmfdb ec -t 5
-  lmfdb ec --conductor 11a1
-  lmfdb ec -r 0 -t 1 -n 50 --fmt json -o curves.json
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
 
-Note: Some queries may be blocked by reCAPTCHA.`)
+	// Create headless browser context to trigger browser download
+	ctx, cancel = chromedp.NewExecAllocator(ctx,
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.Flag("headless", true),
+			chromedp.NoSandbox,
+		)...,
+	)
+	defer cancel()
+
+	// Just start and stop to trigger download
+	chromedp.Run(ctx,
+		chromedp.Navigate("about:blank"),
+	)
+
+	fmt.Println("Chromium browser installed successfully!")
 }
 
 func queryNumberFields(opt NumberFieldOptions) {
@@ -201,13 +211,13 @@ func queryNumberFields(opt NumberFieldOptions) {
 	}
 
 	var url string
-	
+
 	if opt.ID != "" {
 		url = fmt.Sprintf("%s/api/nf_fields/%s/?_format=json", baseURL, opt.ID)
 	} else {
-		url = fmt.Sprintf("%s/api/nf_fields/?_format=json&_limit=%d&degree=i%d", 
+		url = fmt.Sprintf("%s/api/nf_fields/?_format=json&_limit=%d&degree=i%d",
 			baseURL, opt.Limit, opt.Degree)
-		
+
 		if opt.Offset > 0 {
 			url += fmt.Sprintf("&_offset=%d", opt.Offset)
 		}
@@ -232,10 +242,17 @@ func queryNumberFields(opt NumberFieldOptions) {
 		fmt.Printf("  %s\n", url)
 	}
 
-	data := queryAPI(url)
+	var data []map[string]interface{}
+
+	if opt.Browser {
+		data = queryWithBrowser(url)
+	} else {
+		data = queryAPI(url)
+	}
+
 	if data == nil {
 		fmt.Println("Error: Could not fetch data from LMFDB")
-		fmt.Println("Note: Some queries may be blocked by reCAPTCHA")
+		fmt.Println("Tip: Use --browser to bypass reCAPTCHA")
 		return
 	}
 
@@ -262,9 +279,9 @@ func queryEllipticCurves(opt EllipticCurveOptions) {
 		fmt.Println("Querying LMFDB...")
 	}
 
-	url := fmt.Sprintf("%s/api/ec_curvedata/?_format=json&_limit=%d", 
+	url := fmt.Sprintf("%s/api/ec_curvedata/?_format=json&_limit=%d",
 		baseURL, opt.Limit)
-	
+
 	if opt.Offset > 0 {
 		url += fmt.Sprintf("&_offset=%d", opt.Offset)
 	}
@@ -288,9 +305,17 @@ func queryEllipticCurves(opt EllipticCurveOptions) {
 		fmt.Printf("  %s\n", url)
 	}
 
-	data := queryAPI(url)
+	var data []map[string]interface{}
+
+	if opt.Browser {
+		data = queryWithBrowser(url)
+	} else {
+		data = queryAPI(url)
+	}
+
 	if data == nil {
 		fmt.Println("Error: Could not fetch data from LMFDB")
+		fmt.Println("Tip: Use --browser to bypass reCAPTCHA")
 		return
 	}
 
@@ -301,20 +326,74 @@ func queryEllipticCurves(opt EllipticCurveOptions) {
 	}
 }
 
+func queryWithBrowser(url string) []map[string]interface{} {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	ctx, cancel = chromedp.NewExecAllocator(ctx,
+		append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.Flag("headless", true),
+			chromedp.NoSandbox,
+			chromedp.DisableGPU,
+		)...,
+	)
+	defer cancel()
+
+	ctx, cancel = chromedp.NewContext(ctx)
+	defer cancel()
+
+	var html string
+	err := chromedp.Run(ctx,
+		chromedp.Navigate(url),
+		chromedp.OuterHTML("body", &html, chromedp.ByJSPath),
+		chromedp.Sleep(3*time.Second),
+	)
+	if err != nil {
+		fmt.Printf("Browser error: %v\n", err)
+		return nil
+	}
+
+	// Check for reCAPTCHA
+	if strings.Contains(html, "recaptcha") || strings.Contains(html, "Checking your browser") {
+		fmt.Println("Error: Blocked by reCAPTCHA")
+		return nil
+	}
+
+	// Try to extract JSON from page
+	// Look for JSON data in script tags or pre tags
+	if strings.Contains(html, "json") || strings.Contains(html, "data") {
+		// Try to find JSON in the page
+		start := strings.Index(html, "{")
+		end := strings.LastIndex(html, "}")
+		if start >= 0 && end > start {
+			jsonStr := html[start : end+1]
+			var result struct {
+				Data []map[string]interface{} `json:"data"`
+			}
+			if err := json.Unmarshal([]byte(jsonStr), &result); err == nil {
+				return result.Data
+			}
+		}
+	}
+
+	// Fallback: try direct API
+	return queryAPI(url)
+}
+
 func listCollections() {
 	collections := map[string]string{
 		"nf_fields":       "Number fields",
 		"ec_curvedata":    "Elliptic curves",
 		"ec_classdata":    "Elliptic curve isogeny classes",
-		"g2c_curves":     "Genus 2 curves",
-		"char_dirichlet": "Dirichlet characters",
-		"maass_newforms": "Maass forms",
-		"mf_newforms":    "Modular forms",
-		"lf_fields":      "Local fields",
-		"artin":          "Artin representations",
-		"belyi":          "Belyi maps",
+		"g2c_curves":      "Genus 2 curves",
+		"char_dirichlet":  "Dirichlet characters",
+		"maass_newforms":  "Maass forms",
+		"mf_newforms":     "Modular forms",
+		"lf_fields":       "Local fields",
+		"artin":           "Artin representations",
+		"belyi":           "Belyi maps",
 	}
-	
+
 	fmt.Println("\n📚 Available API Collections:\n")
 	for name, desc := range collections {
 		fmt.Printf("  %-20s %s\n", name, desc)
@@ -389,13 +468,12 @@ func printTable(data []map[string]interface{}, format string) {
 	for k := range data[0] {
 		keys = append(keys, k)
 	}
-	// Limit to first 6 keys
 	if len(keys) > 6 {
 		keys = keys[:6]
 	}
 
 	fmt.Printf("\nResults (%d rows)\n\n", len(data))
-	
+
 	// Header
 	for _, k := range keys {
 		val := truncate(k, 14)
@@ -437,7 +515,7 @@ func writeFormat(data []map[string]interface{}, filename, format string, quiet b
 	default:
 		err = fmt.Errorf("unsupported format: %s", format)
 	}
-	
+
 	if err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 	} else if !quiet {
@@ -457,7 +535,7 @@ func writeCSV(w *os.File, data []map[string]interface{}) {
 
 	csv := csv.NewWriter(w)
 	csv.Write(keys)
-	
+
 	for _, item := range data {
 		row := make([]string, len(keys))
 		for i, k := range keys {
@@ -470,12 +548,12 @@ func writeCSV(w *os.File, data []map[string]interface{}) {
 
 func printRecordDetails(data map[string]interface{}, title string) {
 	fmt.Printf("\n=== %s Details ===\n\n", title)
-	
+
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
 	}
-	
+
 	for _, k := range keys {
 		fmt.Printf("%-25s: %v\n", k, formatValue(data[k]))
 	}
