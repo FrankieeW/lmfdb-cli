@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            GOOS: linux
+            GOARCH: amd64
+            EXT: ''
+          - os: ubuntu-latest
+            GOOS: linux
+            GOARCH: arm64
+            EXT: ''
+          - os: macos-latest
+            GOOS: darwin
+            GOARCH: amd64
+            EXT: ''
+          - os: macos-latest
+            GOOS: darwin
+            GOARCH: arm64
+            EXT: ''
+          - os: windows-latest
+            GOOS: windows
+            GOARCH: amd64
+            EXT: '.exe'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.GOOS }}
+          GOARCH: ${{ matrix.GOARCH }}
+        run: |
+          EXT=${{ matrix.EXT }}
+          NAME="lmfdb-${GOOS}-${GOARCH}${EXT}"
+          go build -o "$NAME" ./cmd/lmfdb
+          echo "$NAME" >> build_artifacts.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lmfdb-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
+          path: lmfdb-*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/lmfdb-*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
