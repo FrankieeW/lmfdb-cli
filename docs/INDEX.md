@@ -1,9 +1,9 @@
 # Documentation Index
 
-## Getting Started
+## Usage Guide
 
-- [English](./README.md)
-- [中文](./README.zh-CN.md)
+- [English](./GUIDE.md)
+- [中文](./GUIDE.zh-CN.md)
 
 ## API Reference
 
@@ -14,14 +14,16 @@
 
 ```
 lmfdb-cli/
-├── README.md           # English README
-├── README.zh-CN.md     # Chinese README
-├── pyproject.toml      # Project configuration
-├── lmfdb_cli/
-│   ├── __init__.py
-│   ├── client.py       # Playwright API client
-│   └── main.py        # CLI commands
-└── docs/
-    ├── API.md         # English API reference
-    └── API.zh-CN.md   # Chinese API reference
+├── cmd/lmfdb/main.go    # CLI implementation (Go)
+├── go.mod               # Go module
+├── .github/workflows/
+│   └── build.yml        # CI: build + release
+├── docs/
+│   ├── INDEX.md          # This file
+│   ├── GUIDE.md          # Usage guide (EN)
+│   ├── GUIDE.zh-CN.md    # Usage guide (ZH)
+│   ├── API.md            # API reference (EN)
+│   └── API.zh-CN.md      # API reference (ZH)
+├── README.md             # English README
+└── README.zh-CN.md       # Chinese README
 ```
