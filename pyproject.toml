@@ -1,6 +1,6 @@
 [project]
 name = "lmfdb-cli"
-version = "0.1.0"
+version = "1.2.0"
 description = "CLI tool for querying LMFDB (L-Functions and Modular Forms Database)"
 readme = "README.md"
 requires-python = ">=3.10"
