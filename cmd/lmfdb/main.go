@@ -30,6 +30,9 @@ func main() {
 	nfCmd := flag.NewFlagSet("nf", flag.ExitOnError)
 	ecCmd := flag.NewFlagSet("ec", flag.ExitOnError)
 
+	nfCmd.Usage = printNFHelp
+	ecCmd.Usage = printECHelp
+
 	// nf options
 	nfDegree := nfCmd.Int("d", 2, "Number field degree")
 	nfDisc := nfCmd.String("disc", "", "Filter by discriminant")
@@ -159,27 +162,67 @@ Commands:
   version (v)         Show version information
   install-browser     Install Chrome browser for reCAPTCHA bypass
 
-Number Fields (nf):
-  -d, --degree <n>    Number field degree (default: 2)
-  -n, --limit <n>     Number of results (default: 10)
+Use "lmfdb <command> -h" for more information about a command.
+
+Examples:
+  lmfdb nf -d 2 -n 20
+  lmfdb ec -r 2 --fmt json
+  lmfdb nf --browser -n 50`)
+}
+
+func printNFHelp() {
+	fmt.Println(`Query Number Fields from LMFDB
+
+Usage:
+  lmfdb nf [options]
+
+Options:
+  -d <n>              Number field degree (default: 2)
+  -n <n>              Number of results (default: 10)
   --offset <n>        Result offset for pagination
-  --sort <field>      Sort by field (use -field for descending)
+  --sort <field>      Sort by field (prefix - for descending)
   --disc <value>      Filter by discriminant
   --class <n>         Filter by class number
   --sig <r1,r2>       Filter by signature (e.g., "0,1")
-  -f, --fields <list> Fields to return (comma-separated)
-  -o, --output <file> Output file
-  --fmt <format>      Output format: table, json, csv (default: table)
   --id <label>        Get specific field by label (e.g., 2.0.3.1)
-  -q, --quiet         Quiet mode
+  -f <list>           Fields to return (comma-separated)
+  -o <file>           Output file
+  --fmt <format>      Output format: table, json, csv (default: table)
+  -q                  Quiet mode
   --browser           Use browser (bypasses reCAPTCHA)
 
 Examples:
   lmfdb nf -d 2 -n 20
   lmfdb nf -d 3 --sort -class_number
   lmfdb nf -d 2 --disc -5
-  lmfdb nf --browser -n 50`)
+  lmfdb nf --id 2.0.3.1
+  lmfdb nf --browser -n 50 --fmt json`)
+}
 
+func printECHelp() {
+	fmt.Println(`Query Elliptic Curves from LMFDB
+
+Usage:
+  lmfdb ec [options]
+
+Options:
+  -r <n>              Filter by Mordell-Weil rank
+  -t <n>              Filter by torsion order
+  --conductor <n>     Filter by conductor
+  -n <n>              Number of results (default: 10)
+  --offset <n>        Result offset for pagination
+  --sort <field>      Sort by field (prefix - for descending)
+  -f <list>           Fields to return (comma-separated)
+  -o <file>           Output file
+  --fmt <format>      Output format: table, json, csv (default: table)
+  -q                  Quiet mode
+  --browser           Use browser (bypasses reCAPTCHA)
+
+Examples:
+  lmfdb ec -n 10
+  lmfdb ec -r 2 --fmt json
+  lmfdb ec -t 5 --conductor 11
+  lmfdb ec --browser -n 50`)
 }
 
 func installBrowser() {
