@@ -1,0 +1,88 @@
+Metadata-Version: 2.4
+Name: lmfdb-cli
+Version: 0.1.0
+Summary: CLI tool for querying LMFDB (L-Functions and Modular Forms Database)
+Author-email: Your Name <you@example.com>
+License: MIT
+Keywords: lmfdb,mathematics,number-theory,cli
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: typer>=0.12.0
+Requires-Dist: rich>=13.7.0
+Requires-Dist: playwright>=1.40.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: pydantic-settings>=2.1.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.7.0; extra == "dev"
+
+# LMFDB CLI
+
+一个用于查询 LMFDB (L-Functions and Modular Forms Database) 的命令行工具。
+
+## 安装
+
+```bash
+# 克隆项目
+git clone https://github.com/yourusername/lmfdb-cli.git
+cd lmfdb-cli
+
+# 安装依赖
+pip install -e .
+
+# 安装 Playwright 浏览器
+playwright install chromium
+```
+
+## 使用方法
+
+```bash
+# 查询二次域 (quadratic fields)
+lmfdb nf -d 2 -n 10
+
+# 查询椭圆曲线
+lmfdb ec -r 2 -t 5
+
+# 查询椭圆曲线 (指定字段)
+lmfdb ec -r 0 --fields label,conductor,rank,torsion
+
+# 查看可用数据库
+lmfdb list
+
+# 获取帮助
+lmfdb --help
+lmfdb nf --help
+```
+
+## 功能
+
+- ✅ 绕过 reCAPTCHA (使用 Playwright)
+- ✅ 支持所有 LMFDB API 集合
+- ✅ 精美的表格输出
+- ✅ 支持自定义字段
+- ✅ JSON/YAML 输出格式
+- ✅ 过滤和排序
+
+## 开发
+
+```bash
+# 安装开发依赖
+pip install -e ".[dev]"
+
+# 运行测试
+pytest
+
+# 代码格式化
+ruff check .
+ruff format .
+```

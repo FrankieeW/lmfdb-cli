@@ -1,0 +1,2 @@
+[console_scripts]
+lmfdb = lmfdb_cli.main:app

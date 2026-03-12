@@ -1,0 +1,37 @@
+# LMFDB CLI Bash Completion
+
+_lmfdb() {
+    local cur prev opts
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    opts="nf ec query list-collections version help"
+    nf_opts="--degree --discriminant --class-number --limit --fields --output --headless --no-headless"
+    ec_opts="--rank --torsion --conductor --limit --fields --output --headless --no-headless"
+    query_opts="--limit --fields --output --headless --no-headless --kwargs"
+    
+    case "${prev}" in
+        nf)
+            COMPREPLY=( $(compgen -W "${nf_opts}" -- ${cur}) )
+            return 0
+            ;;
+        ec)
+            COMPREPLY=( $(compgen -W "${ec_opts}" -- ${cur}) )
+            return 0
+            ;;
+        query)
+            COMPREPLY=( $(compgen -W "${query_opts}" -- ${cur}) )
+            return 0
+            ;;
+        -d|--degree|-n|--limit|-f|--fields|-o|--output|-r|--rank|-t|--torsion|--conductor|-h|--class-number|-k|--kwargs)
+            return 0
+            ;;
+        *)
+            ;;
+    esac
+    
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+}
+
+complete -F _lmfdb lmfdb

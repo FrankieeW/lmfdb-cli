@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+lmfdb_cli/__init__.py
+lmfdb_cli/client.py
+lmfdb_cli/main.py
+lmfdb_cli.egg-info/PKG-INFO
+lmfdb_cli.egg-info/SOURCES.txt
+lmfdb_cli.egg-info/dependency_links.txt
+lmfdb_cli.egg-info/entry_points.txt
+lmfdb_cli.egg-info/requires.txt
+lmfdb_cli.egg-info/top_level.txt
