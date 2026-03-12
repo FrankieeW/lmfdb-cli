@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""
+LMFDB CLI - Command-line tool for querying LMFDB
+"""
+import sys
+
+def main():
+    print("LMFDB CLI v0.1.0")
+    print("Usage: lmfdb [command]")
+    print("")
+    print("Commands:")
+    print("  nf                  Query Number Fields")
+    print("  ec                  Query Elliptic Curves")
+    print("  query               Generic query command")
+    print("  list-collections    List available API collections")
+    print("  version             Show version information")
+    print("")
+    print("Install Playwright browsers:")
+    print("  lmfdb install-browser")
+
+if __name__ == "__main__":
+    main()
