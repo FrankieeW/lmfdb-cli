@@ -454,7 +454,7 @@ func printTable(data []map[string]interface{}, format string) {
 
 	if format == "json" {
 		jsonData, _ := json.MarshalIndent(data, "", "  ")
-		fmt.Println(string(jsonData))
+		printColorJSON(string(jsonData))
 		return
 	}
 
@@ -586,4 +586,73 @@ func truncate(s string, maxLen int) string {
 		return s[:maxLen-2] + ".."
 	}
 	return s
+}
+
+// ANSI color codes
+const (
+	colorReset   = "\033[0m"
+	colorCyan    = "\033[36m"
+	colorGreen   = "\033[32m"
+	colorYellow  = "\033[33m"
+	colorMagenta = "\033[35m"
+	colorGray    = "\033[90m"
+)
+
+func printColorJSON(s string) {
+	var buf strings.Builder
+	i := 0
+	for i < len(s) {
+		ch := s[i]
+		switch {
+		case ch == '"':
+			// Find the closing quote
+			j := i + 1
+			for j < len(s) && s[j] != '"' {
+				if s[j] == '\\' {
+					j++
+				}
+				j++
+			}
+			j++ // include closing quote
+			token := s[i:j]
+
+			// Check if this is a key (followed by ':')
+			k := j
+			for k < len(s) && s[k] == ' ' {
+				k++
+			}
+			if k < len(s) && s[k] == ':' {
+				buf.WriteString(colorCyan + token + colorReset)
+			} else {
+				buf.WriteString(colorGreen + token + colorReset)
+			}
+			i = j
+		case ch == '-' || (ch >= '0' && ch <= '9'):
+			j := i
+			for j < len(s) && (s[j] == '-' || s[j] == '.' || s[j] == 'e' || s[j] == 'E' || s[j] == '+' || (s[j] >= '0' && s[j] <= '9')) {
+				j++
+			}
+			buf.WriteString(colorYellow + s[i:j] + colorReset)
+			i = j
+		case ch == 't' || ch == 'f' || ch == 'n':
+			// true, false, null
+			for _, kw := range []string{"true", "false", "null"} {
+				if strings.HasPrefix(s[i:], kw) {
+					buf.WriteString(colorMagenta + kw + colorReset)
+					i += len(kw)
+					goto next
+				}
+			}
+			buf.WriteByte(ch)
+			i++
+		case ch == '{' || ch == '}' || ch == '[' || ch == ']':
+			buf.WriteString(colorGray + string(ch) + colorReset)
+			i++
+		default:
+			buf.WriteByte(ch)
+			i++
+		}
+	next:
+	}
+	fmt.Println(buf.String())
 }

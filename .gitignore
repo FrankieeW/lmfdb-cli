@@ -1,6 +1,6 @@
 # Binary
-lmfdb
-lmfdb-*
+/lmfdb
+/lmfdb-*
 *.exe
 
 # Go
