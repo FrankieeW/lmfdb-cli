@@ -8,7 +8,6 @@ vendor/
 
 # Rust
 /target/
-Cargo.lock
 
 # OMC session state
 .omc/

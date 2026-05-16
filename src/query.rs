@@ -2,10 +2,14 @@ use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
 use serde_json::{Map, Value};
+use url::Url;
 
 const BASE_URL: &str = "https://www.lmfdb.org";
-const USER_AGENT: &str =
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 lmfdb-cli";
+const USER_AGENT: &str = concat!(
+    "lmfdb-cli/",
+    env!("CARGO_PKG_VERSION"),
+    " (+https://github.com/FrankieeW/lmfdb-cli)"
+);
 
 pub struct NfOptions {
     pub degree: u32,
@@ -32,71 +36,76 @@ pub struct EcOptions {
 }
 
 pub fn build_nf_url(opt: &NfOptions) -> String {
+    let base = Url::parse(BASE_URL).expect("BASE_URL is valid");
+
     if let Some(id) = &opt.id {
-        return format!("{BASE_URL}/api/nf_fields/{id}/?_format=json");
+        let mut url = base.join("/api/nf_fields/").expect("static path");
+        url.path_segments_mut()
+            .expect("URL has path segments")
+            .pop_if_empty()
+            .push(id)
+            .push("");
+        url.query_pairs_mut().append_pair("_format", "json");
+        return url.into();
     }
 
-    let mut url = format!(
-        "{BASE_URL}/api/nf_fields/?_format=json&_limit={}&degree=i{}",
-        opt.limit, opt.degree
-    );
-
-    if opt.offset > 0 {
-        url.push_str(&format!("&_offset={}", opt.offset));
+    let mut url = base.join("/api/nf_fields/").expect("static path");
+    {
+        let mut q = url.query_pairs_mut();
+        q.append_pair("_format", "json");
+        q.append_pair("_limit", &opt.limit.to_string());
+        q.append_pair("degree", &format!("i{}", opt.degree));
+        if opt.offset > 0 {
+            q.append_pair("_offset", &opt.offset.to_string());
+        }
+        if let Some(sort) = &opt.sort {
+            q.append_pair("_sort", sort);
+        }
+        if let Some(disc) = &opt.disc {
+            q.append_pair("disc", &format!("i{disc}"));
+        }
+        if let Some(cn) = &opt.class_num {
+            q.append_pair("class_number", &format!("i{cn}"));
+        }
+        if let Some(sig) = &opt.signature {
+            q.append_pair("signature", &format!("li{}", sig.replace(',', ";")));
+        }
+        if let Some(fields) = &opt.fields {
+            q.append_pair("_fields", fields);
+        }
     }
-    if let Some(sort) = &opt.sort {
-        url.push_str("&_sort=");
-        url.push_str(sort);
-    }
-    if let Some(disc) = &opt.disc {
-        url.push_str("&disc=i");
-        url.push_str(disc);
-    }
-    if let Some(cn) = &opt.class_num {
-        url.push_str("&class_number=i");
-        url.push_str(cn);
-    }
-    if let Some(sig) = &opt.signature {
-        url.push_str("&signature=li");
-        url.push_str(&sig.replace(',', ";"));
-    }
-    if let Some(fields) = &opt.fields {
-        url.push_str("&_fields=");
-        url.push_str(fields);
-    }
-    url
+    url.into()
 }
 
 pub fn build_ec_url(opt: &EcOptions) -> String {
-    let mut url = format!(
-        "{BASE_URL}/api/ec_curvedata/?_format=json&_limit={}",
-        opt.limit
-    );
-
-    if opt.offset > 0 {
-        url.push_str(&format!("&_offset={}", opt.offset));
+    let mut url = Url::parse(BASE_URL)
+        .expect("BASE_URL is valid")
+        .join("/api/ec_curvedata/")
+        .expect("static path");
+    {
+        let mut q = url.query_pairs_mut();
+        q.append_pair("_format", "json");
+        q.append_pair("_limit", &opt.limit.to_string());
+        if opt.offset > 0 {
+            q.append_pair("_offset", &opt.offset.to_string());
+        }
+        if let Some(sort) = &opt.sort {
+            q.append_pair("_sort", sort);
+        }
+        if let Some(r) = &opt.rank {
+            q.append_pair("rank", &format!("i{r}"));
+        }
+        if let Some(t) = &opt.torsion {
+            q.append_pair("torsion", &format!("i{t}"));
+        }
+        if let Some(c) = &opt.conductor {
+            q.append_pair("conductor", c);
+        }
+        if let Some(fields) = &opt.fields {
+            q.append_pair("_fields", fields);
+        }
     }
-    if let Some(sort) = &opt.sort {
-        url.push_str("&_sort=");
-        url.push_str(sort);
-    }
-    if let Some(r) = &opt.rank {
-        url.push_str("&rank=i");
-        url.push_str(r);
-    }
-    if let Some(t) = &opt.torsion {
-        url.push_str("&torsion=i");
-        url.push_str(t);
-    }
-    if let Some(c) = &opt.conductor {
-        url.push_str("&conductor=");
-        url.push_str(c);
-    }
-    if let Some(fields) = &opt.fields {
-        url.push_str("&_fields=");
-        url.push_str(fields);
-    }
-    url
+    url.into()
 }
 
 pub fn fetch(url: &str, browser: bool) -> Result<Vec<Map<String, Value>>> {
@@ -117,19 +126,24 @@ fn fetch_api(url: &str) -> Result<Vec<Map<String, Value>>> {
     let status = resp.status();
     let body = resp.text()?;
 
-    if body.contains("recaptcha") || body.contains("Checking your browser") {
-        bail!("blocked by reCAPTCHA (try --browser; not yet ported)");
-    }
     if !status.is_success() {
-        bail!("HTTP {status}: {}", body.chars().take(200).collect::<String>());
+        bail!(
+            "HTTP {status}: {}",
+            body.chars().take(200).collect::<String>()
+        );
+    }
+
+    let lower = body.to_ascii_lowercase();
+    if lower.contains("recaptcha") || lower.contains("checking your browser") {
+        bail!("blocked by reCAPTCHA (try --browser; not yet ported)");
     }
 
     parse_records(&body)
 }
 
 fn parse_records(body: &str) -> Result<Vec<Map<String, Value>>> {
-    let value: Value = serde_json::from_str(body)
-        .map_err(|e| anyhow!("parsing JSON response: {e}"))?;
+    let value: Value =
+        serde_json::from_str(body).map_err(|e| anyhow!("parsing JSON response: {e}"))?;
 
     // Two response shapes:
     //   { "data": [ {...}, ... ] }  -- list endpoint
@@ -137,10 +151,16 @@ fn parse_records(body: &str) -> Result<Vec<Map<String, Value>>> {
     if let Some(data) = value.get("data") {
         if let Some(arr) = data.as_array() {
             let mut out = Vec::with_capacity(arr.len());
+            let mut skipped = 0usize;
             for item in arr {
                 if let Some(obj) = item.as_object() {
                     out.push(obj.clone());
+                } else {
+                    skipped += 1;
                 }
+            }
+            if skipped > 0 {
+                eprintln!("warning: skipped {skipped} non-object record(s) in response");
             }
             return Ok(out);
         }
@@ -171,12 +191,28 @@ mod tests {
     }
 
     #[test]
-    fn nf_id_url_skips_filters() {
+    fn nf_id_url_includes_format() {
         let mut o = nf_default();
         o.id = Some("2.0.3.1".into());
         o.degree = 5; // ignored when id is set
         let url = build_nf_url(&o);
-        assert_eq!(url, "https://www.lmfdb.org/api/nf_fields/2.0.3.1/?_format=json");
+        assert_eq!(
+            url,
+            "https://www.lmfdb.org/api/nf_fields/2.0.3.1/?_format=json"
+        );
+    }
+
+    #[test]
+    fn nf_id_url_encodes_path_segment() {
+        let mut o = nf_default();
+        // A pathological id with a slash and a query separator.
+        o.id = Some("foo/bar?baz".into());
+        let url = build_nf_url(&o);
+        // The slash and ? in the id must be percent-encoded, not interpreted as
+        // path/query separators.
+        assert!(url.starts_with("https://www.lmfdb.org/api/nf_fields/"));
+        assert!(url.contains("foo%2Fbar%3Fbaz"));
+        assert!(url.ends_with("?_format=json"));
     }
 
     #[test]
@@ -189,13 +225,25 @@ mod tests {
         o.sort = Some("-class_number".into());
         o.fields = Some("label,disc".into());
         let url = build_nf_url(&o);
-        assert!(url.starts_with("https://www.lmfdb.org/api/nf_fields/?_format=json&_limit=10&degree=i2"));
-        assert!(url.contains("&_offset=20"));
-        assert!(url.contains("&_sort=-class_number"));
-        assert!(url.contains("&disc=i-5"));
-        assert!(url.contains("&class_number=i1"));
-        assert!(url.contains("&signature=li0;1"));
-        assert!(url.contains("&_fields=label,disc"));
+        assert!(url.starts_with("https://www.lmfdb.org/api/nf_fields/?"));
+        assert!(url.contains("_limit=10"));
+        assert!(url.contains("degree=i2"));
+        assert!(url.contains("_offset=20"));
+        assert!(url.contains("_sort=-class_number"));
+        assert!(url.contains("disc=i-5"));
+        assert!(url.contains("class_number=i1"));
+        assert!(url.contains("signature=li0%3B1"));
+        // commas are unreserved per RFC 3986 and may pass through.
+        assert!(url.contains("_fields=label") && url.contains("disc"));
+    }
+
+    #[test]
+    fn nf_url_encodes_special_chars_in_filters() {
+        let mut o = nf_default();
+        // `&` and `=` would corrupt the query if not encoded.
+        o.disc = Some("1&x=2".into());
+        let url = build_nf_url(&o);
+        assert!(url.contains("disc=i1%26x%3D2"));
     }
 
     #[test]
@@ -212,10 +260,10 @@ mod tests {
         };
         let url = build_ec_url(&opt);
         assert!(url.contains("_limit=25"));
-        assert!(url.contains("&rank=i2"));
-        assert!(url.contains("&torsion=i5"));
-        assert!(url.contains("&conductor=11"));
-        assert!(url.contains("&_sort=conductor"));
+        assert!(url.contains("rank=i2"));
+        assert!(url.contains("torsion=i5"));
+        assert!(url.contains("conductor=11"));
+        assert!(url.contains("_sort=conductor"));
     }
 
     #[test]

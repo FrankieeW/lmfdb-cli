@@ -152,21 +152,22 @@ fn run_nf(args: NfArgs) -> Result<()> {
     }
     let data = query::fetch(&url, opts.browser).context("fetching from LMFDB")?;
 
-    if opts.id.is_some() && data.len() == 1 {
-        if let Some(path) = args.output.as_deref() {
-            output::write_to_file(&data, path, args.format, args.quiet)?;
-        } else {
-            output::print_record(&data[0], "Number Field");
+    if let Some(id) = &opts.id {
+        match data.len() {
+            0 => anyhow::bail!("no number field found for id {id}"),
+            1 => {
+                if let Some(path) = args.output.as_deref() {
+                    output::write_to_file(&data, path, args.format, args.quiet)?;
+                } else {
+                    output::print_record(&data[0], "Number Field");
+                }
+                return Ok(());
+            }
+            n => anyhow::bail!("expected 1 record for id {id}, got {n}"),
         }
-        return Ok(());
     }
 
-    if let Some(path) = args.output.as_deref() {
-        output::write_to_file(&data, path, args.format, args.quiet)?;
-    } else {
-        output::print(&data, args.format)?;
-    }
-    Ok(())
+    emit(&data, args.output.as_deref(), args.format, args.quiet)
 }
 
 fn run_ec(args: EcArgs) -> Result<()> {
@@ -187,10 +188,18 @@ fn run_ec(args: EcArgs) -> Result<()> {
     }
     let data = query::fetch(&url, opts.browser).context("fetching from LMFDB")?;
 
-    if let Some(path) = args.output.as_deref() {
-        output::write_to_file(&data, path, args.format, args.quiet)?;
+    emit(&data, args.output.as_deref(), args.format, args.quiet)
+}
+
+fn emit(
+    data: &[serde_json::Map<String, serde_json::Value>],
+    output_path: Option<&str>,
+    format: Format,
+    quiet: bool,
+) -> Result<()> {
+    if let Some(path) = output_path {
+        output::write_to_file(data, path, format, quiet)
     } else {
-        output::print(&data, args.format)?;
+        output::print(data, format)
     }
-    Ok(())
 }
