@@ -6,5 +6,12 @@
 # Go
 vendor/
 
+# Rust
+/target/
+Cargo.lock
+
+# OMC session state
+.omc/
+
 # OS
 .DS_Store
